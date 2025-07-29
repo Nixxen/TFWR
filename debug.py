@@ -2,6 +2,16 @@
 import log
 import static
 
+# Debug wrapper for executing a function.
+# Can save some ticks if call is only used for fetching debug data
+def execute(function, parameter = None, override = False):
+	if not log.enabled_debug and not override:
+		return
+	if parameter == None:
+		return function()
+	return function(parameter)
+	
+
 # Debug print each item of a list
 def list(moves, header = "", override = False):
 	if not log.enabled_debug and not override:
@@ -14,7 +24,16 @@ def list(moves, header = "", override = False):
 		log.debug([move], override)
 		
 # Debug print a dict represented as a grid of the field
-def dict(grid, header = "", override = False):
+# Text_width is the expected max width of the value.
+# Paddind will be auto adjusted up to that point
+def dict(grid, header = "", override = False, text_width = 1):
+	def pad_left(times):
+		pad = ""
+		for _ in range(times):
+			pad += " "
+		return pad
+		
+	grid_width = text_width + 1
 	if not log.enabled_debug and not override:
 		return
 	if header == "":
@@ -28,9 +47,11 @@ def dict(grid, header = "", override = False):
 			pos = (x, y)
 			val = grid[pos]
 			if val == None:
-				line += " ."
+				pad = pad_left(text_width)
+				line += pad + "."
 			else:
-				line += " " + str(val)
+				pad = pad_left(grid_width - len(str(val)))
+				line += pad + str(val)
 		log.debug([line], override)
 		y -= 1
 

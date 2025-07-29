@@ -2,6 +2,7 @@ import static
 import position
 import algorithms
 import log
+import debug
 
 plants={}
 infected={}
@@ -55,40 +56,23 @@ def get_highest_value_pos(drone_pos):
 			highest_pos = pos
 	return highest_pos, value[highest_pos]
 
-# Similar to get_highest_value_pos, but returns the closest highest value
-# with the lowest grow time (prioritize 0 growtime, then lowest)
-def get_closest_highest_value_pos(drone_pos):
+# Similar to get_highest_value_pos, but returns a list of highest values
+# with the lowest grow time (consider 0 growtime only)
+def get_highest_value_pos_list():
 	highest_list_potential = []
 	highest_value = 0
 	for pos in value:
-		if value[pos] and value[pos]>=highest_value:
+		if value[pos] and not growing[pos] and value[pos] >= highest_value:
 			highest_value = value[pos]
 			entity = (value[pos], pos)
 			if not highest_list_potential:
 				highest_list_potential.append(entity)
 				continue
-			while highest_list_potential[0][0] < highest_value:
-				highest_list_potential.pop(0)
-				if not highest_list_potential:
-					break
+			if highest_list_potential[-1][0] < highest_value:
+				highest_list_potential = [] # Lower value list, reset it
 			highest_list_potential.append(entity)
 	# All entities in the list should have equal value
-	closest_entity = None
-	closest_distance = None
-	grow_times = []
-	for entity in highest_list_potential:
-		grow_times.append((growing[entity[1]], entity))
-	grow_times = algorithms.selection_sort(grow_times)
-	for grow_time, entity in grow_times:
-		distance = position.distance(drone_pos, entity[1], True)
-		if not closest_entity:
-			closest_entity = entity
-			closest_distance = distance
-			continue
-		if distance < closest_distance:
-			cosest_entity = entity
-			closest_distance = distance
-	return closest_entity
+	return highest_list_potential
 
 def update_growing():
 	for pos in growing:
@@ -125,12 +109,14 @@ def water(pos):
 		return
 	multiplier[pos] = get_water()*5
 
-def action(task, arg1, arg2 = None):
+def action(task, arg1 = None, arg2 = None):
 	result = False
 	if arg2:
 		result = task(arg1, arg2)
-	else:
+	elif arg1:
 		result = task(arg1)
+	else:
+		result = task()
 	update_growing()
 	return result
 
@@ -143,25 +129,26 @@ def create_distance_map(source):
 			distance_map[pos] = position.distance(source, pos)
 	return distance_map
 	
-def plant_field(plant_entity, ground_type, take_measurement = False, do_harvest = False):
+def plant_field(plant_entity, ground_type, do_measurement = False, do_harvest = False, do_water = True):
 	position.go_to(0, 0)
 	for x in range(static.world_size):
 		for y in range(static.world_size):
 			pos = (x, y)
 			if not tilled[pos]:
 				if get_ground_type() != ground_type:
-					till()
+					action(till)
 				tilled[pos] = True
 			harvested = False
-			growth_multiplier = water(pos)
+			if do_water:
+				water(pos)
 			current_entity = get_entity_type()
 			if current_entity and (current_entity != plant_entity):
-				harvested = harvest() # Remove invalid entity without waiting for growth
+				harvested = action(harvest) # Remove invalid entity without waiting for growth
 			if do_harvest and not harvested and can_harvest():
-				harvested = harvest()
+				harvested = action(harvest)
 			if harvested or not current_entity:
 				action(plant, plant_entity)
-			if take_measurement:
+			if do_measurement:
 				value[pos] = measure()
 			action(move, North)
 		action(move, East)

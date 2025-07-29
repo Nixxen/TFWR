@@ -4,6 +4,7 @@ import min_heap
 import algorithms
 import field
 import log
+import debug
 
 # Pathfind from pos to target avoiding any blocking_position using A*
 # Returns the full path of moves required to reach target without
@@ -13,9 +14,8 @@ import log
 #  any truthy value will be blocking.
 # If `moving_block` is true, each move will make the block
 # follow the drone (e.g., for Snake)
-# If `moving_block` is false, the blocks are considered
-# static (e.g., for mazes)
-def pathfind(start, target, heur, blocked_positions, moving_block = False):
+# If `moving_block` is false, the blocks are considered static (e.g., for mazes)
+def astar(start, target, heur, blocked_positions, moving_block = False):
 	# Returns a stack for the path
 	def reconstruct_path(moves, current):
 		path = [current]
@@ -97,6 +97,58 @@ def pathfind(start, target, heur, blocked_positions, moving_block = False):
 					min_heap.insert(open_heap, (estimated_cost[neighbor], neighbor))
 	return []
 
+# Pathfind from pos through all targets assuming no blocks
+# Returns the full path-stack of moves required to traverse all targets
+# in a greedy-effort shortet path. A radius is used to further
+# "greed up" the search. If no points are detected within the radius,
+# the full grid is searched.
+# Targets are a list of entities following the (value, (x, y)) format.
+# Uses position.distance with wrapping as a cost function.
+# max_radius is the initial search radius limiting factor.
+def greedy_wrapped_traversal(start, targets, max_radius = 5):
+	visited = set()
+	path = []
+	current = start
+	size = static.world_size - 1
+	
+	def is_within_radius(pos_a, pos_b):
+		dx = abs(pos_a[0] - pos_b[0])
+		if dx > max_radius and (size - dx) > max_radius:
+			return False
+		dy = abs(pos_a[1] - pos_b[1])
+		if dy > max_radius and (size - dy) > max_radius:
+			return False
+		return True
+		
+	def find_best_target(current, targets, visited, use_radius_filter):
+		best_pos = None
+		best_distance = 9999999 # Arbitrarily high number
+		for i in range(len(targets)):
+			pos = targets[i][1]
+			if pos in visited:
+				continue
+			if use_radius_filter and not is_within_radius(current, pos):
+				continue
+			distance = position.distance(current, pos, True)
+			if distance < best_distance:
+				best_pos = pos
+				best_distance = distance
+		return best_pos
+				
+	for _ in targets:
+		# First pass: radius-filtered scan
+		best_pos = find_best_target(current, targets, visited, True)
+		# Fallback: full scan if no close point found
+		if best_pos == None:
+			best_pos = find_best_target(current, targets, visited, False)
+		visited.add(best_pos)
+		path.append(best_pos)
+		current = best_pos
+	
+	# Reverse to stack
+	algorithms.reverse_list_in_place(path)
+	return path
+
 def debug_moves(grid, moves, override = False):
 	log.debug(["Moves debug:", override])
 	y = static.world_size - 1
@@ -123,7 +175,7 @@ def debug_moves(grid, moves, override = False):
 		log.debug([line], override)
 		y -= 1
 
-def main():
+def main_astar():
 	def heur_test(start, end):
 		x1, y1 = start
 		x2, y2 = end
@@ -136,9 +188,31 @@ def main():
 	blocking[(0,2)] = 2
 	blocking[(1,2)] = 1
 	
-	moves = pathfind(start, target, position.distance, blocking, False)
+	moves = astar(start, target, position.distance, blocking, False)
 	log.info(["Path:", moves])
 	debug_moves(blocking, moves, True)
 	
+def main_greedy():
+	start = (0,0)
+	targets = [
+		(1, (0,3)),
+		(1, (0,5)),
+		(1, (1,3)),
+		(1, (4,4)),
+		(1, (1,1)),
+		(1, (8,8))
+	]
+	
+	moves = greedy_wrapped_traversal(start, targets)
+	log.info(["Path:", moves])
+	order = algorithms.copy_dict(field.empty)
+	visit_number = 1
+	for index in range(len(targets) -1, -1, -1):
+		pos = moves[index]
+		order[pos] = visit_number
+		visit_number += 1
+	debug.dict(order, "Greedy path debug:", True)
+	
 if __name__ == '__main__':
-	main()
+	#main_astar()
+	main_greedy()

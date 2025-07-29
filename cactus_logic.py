@@ -27,18 +27,21 @@ def plant_cactus(target_items, poison_pills):
 				west = position.update(pos, West, False)
 				for dir in [south, west]:
 					if dir != None and field.value[dir] > field.value[pos]:
+						debug.dict(field.value, "Debug current value:", True)
+						debug.set(field.locked, "Debug locked:", True)
 						log.error(["Unexpected logic. Debug this"])
 				val = field.value[pos]
 				if not val in unlocked_values:
-					debug.dict(field.value, "Unlocked error:", True)
+					debug.dict(field.value, "Unlocked error values:", True)
+					debug.set(field.locked, "Unlocked error locked:", True)
 					log.error(["Missing value", val, "in unlocked values:", unlocked_values])
 				unlocked_values[val] -= 1
 				if unlocked_values[val] <= 0:
 					unlocked_values.pop(val)
 			
-			def higher_unlock_exist(current):
-				for val in unlocked_values:
-					if val > current:
+			def higher_unlock_exist(_current):
+				for _val in unlocked_values:
+					if _val > _current:
 						return True
 				return False
 			
@@ -185,7 +188,7 @@ def plant_cactus(target_items, poison_pills):
 	while num_items(Items.Cactus) < target_items:
 		if poison_pill.triggered(poison_pills):
 			break
-		field.plant_field(Entities.Cactus, Grounds.Soil, True, False, )
+		field.plant_field(Entities.Cactus, Grounds.Soil, True, False, False)
 		sort_cacti()
 		while not can_harvest():
 			pass # In the unlikely event the cacti are not yet grown, burn some ticks

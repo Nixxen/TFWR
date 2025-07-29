@@ -2,7 +2,7 @@
 def selection_sort(entities):
 	for i in range(len(entities)):
 		min_index = i
-		for j in range(i+1, len(entities)):
+		for j in range(i+1, len(entities)): 
 			if entities[j][0] < entities[min_index][0]:
 				min_index = j
 		if min_index != i:
@@ -56,8 +56,48 @@ def copy_dict(original):
 	for key in original:
 		new_dict[key] = original[key]
 	return new_dict
+	
+# Returns the lowest of two items, or the first if the items are equal
+# If neither item exist in Items, retusns None
+def lowest_item(item_a, item_b):
+	if item_a == item_b:
+		return item_a # They are equal, assume order does not matter
+	for item in Items:
+		if item_a == item:
+			return item_a
+		if item_b == item:
+			return item_b
+	return None
 
-def main():
+# Returns true if item a is less than or equal to item b
+def item_leq(item_a, item_b):
+	return item_a == lowest_item(item_a, item_b)
+	
+# Reverses the input list in place
+def reverse_list_in_place(list):
+	start = 0
+	end = len(list) - 1
+	while start < end:
+		temp = list[start]
+		list[start] = list[end]
+		list[end] = temp
+		start += 1
+		end -= 1
+
+# Returns the key with the highest value in the dict
+# Assumes the dict values are integers
+def get_key_with_highest_value(dict):
+	max_key = None
+	max_value = -9999
+	for key in dict:
+		if dict[key] < max_value:
+			continue
+		max_value = dict[key]
+		max_key = key
+	return max_key
+			
+
+def main_highest_value():
 	import log
 	any_pos = (0,0)
 	unsorted = [
@@ -78,6 +118,16 @@ def main():
 	
 	highest = get_highest_values(unsorted)
 	log.info(["Highest:", highest])
+
+def main_reverse():
+	import log
 	
+	list = [1, 2, 3, 1, 2, 3, 4]
+	log.info(["Before reverse:", list])
+	
+	reverse_list_in_place(list)
+	log.info(["After reverse:", list])
+
 if __name__ == '__main__':
-	main()
+	#main_highest_value()
+	main_reverse()

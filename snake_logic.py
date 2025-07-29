@@ -54,7 +54,7 @@ def be_dinosaur(target_items, poison_pills):
 		tail = [pos]
 		move_cost_reduction = 0.03 * tail_length
 		tail_grid = build_tail_grid(tail)
-		moves = pathfinding.pathfind(pos, next_apple_pos, position.distance, tail_grid, False)
+		moves = pathfinding.astar(pos, next_apple_pos, position.distance, tail_grid, False)
 		while can_move(pos, tail):
 			next_move = moves.pop()
 			moved = position.go_to_limited(next_move[0], next_move[1])
@@ -70,7 +70,7 @@ def be_dinosaur(target_items, poison_pills):
 					break
 				tail_length += 1
 				tail_grid = build_tail_grid(tail)
-				moves = pathfinding.pathfind(pos, next_apple_pos, position.distance, tail_grid, True)
+				moves = pathfinding.astar(pos, next_apple_pos, position.distance, tail_grid, True)
 				if not moves:
 					log.debug(["Pathfinding failed. Aborting"])
 					break

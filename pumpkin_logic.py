@@ -15,8 +15,7 @@ def plant_pumpkin(target_items, poison_pills):
 				wrap_x = (x + start_pos[0]) % static.world_size
 				wrap_y = (y + start_pos[1]) % static.world_size
 				pos = (wrap_x, wrap_y)
-				# TODO: Verify offset works as expected
-				growth_multiplier = field.water(pos)
+				field.water(pos)
 				current_entity=get_entity_type()
 				if not current_entity:
 					plant(Entities.Pumpkin)

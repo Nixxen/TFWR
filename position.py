@@ -5,11 +5,11 @@ def get_xy():
 	return (get_pos_x(),get_pos_y())
 
 # Returns the action cost of getting from A to B
-def distance(pos_a, pos_b, allow_warp = False):
+def distance(pos_a, pos_b, allow_wrap = False):
 	x1, y1 = pos_a
 	x2, y2 = pos_b
 	size = static.world_size
-	if not allow_warp:
+	if not allow_wrap:
 		return abs(x1 - x2) + abs(y1 - y2)
 	# Wrap-aware Manhattan distance
 	delta_x = min(abs(x1 - x2), size - abs(x1 - x2))
@@ -85,7 +85,7 @@ def go_to(x_target, y_target):
 				field.action(move,South)
 				pos = (pos[0], (pos[1] - 1 + static.world_size) % static.world_size)
 				
-# Go to target coordinates without world warp
+# Go to target coordinates without world wrap
 # Assumes path can be bloced
 def go_to_limited(x_target, y_target):
 	pos = get_xy()
