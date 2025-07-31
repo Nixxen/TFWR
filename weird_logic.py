@@ -45,7 +45,6 @@ def plant_grass_fertilize(target_items, poison_pills):
 		moves = [North, East, West, North, South, West, East, South]
 		harvest_cross()
 		pos = pre_plant_cross(planting_center)
-		counter = 0
 		
 		while num_items(Items.Weird_Substance) < target_items:
 			if poison_pill.triggered(poison_pills):

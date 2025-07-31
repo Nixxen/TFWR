@@ -125,8 +125,9 @@ def determine():
 				continue
 			for item in unlock_priority[unlock]:
 				for cheapest_item in cheapest_cost:
-					# Using naive approach for signle item comparison, ignoring if multiple items are required
+					# Using naive approach for single item comparison, ignoring if multiple items are required
 					# TODO: Consider total cost
+					# TODO: Consider value of Gold vs Hay
 					if not algorithms.item_leq(item, cheapest_item):
 						continue
 					if item == cheapest_item and not unlock_priority[unlock][item] < cheapest_cost[cheapest_item]:

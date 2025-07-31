@@ -6,7 +6,10 @@ import log
 import pathfinding
 import debug
 import algorithms
+import timer
 
+
+# Mostly optimized reaches ~67000 items per min at a ~9:1 harvest:cost convergence
 def amaze(target_items, poison_pills):
 	log.info(["Hunting for gold until", target_items])
 	
@@ -84,6 +87,9 @@ def amaze(target_items, poison_pills):
 	gold_per_solve = (size**2) * num_unlocked(Unlocks.Mazes)
 	solves_to_target = (target_items - num_items(Items.Gold))/gold_per_solve
 	
+	gain_and_cost_items = [Items.Gold, Items.Weird_Substance]
+	for item in gain_and_cost_items:
+		timer.start(item)
 	while num_items(Items.Gold) < target_items:
 		if poison_pill.triggered(poison_pills):
 			break
@@ -132,13 +138,15 @@ def amaze(target_items, poison_pills):
 		before_harvest = num_items(Items.Gold)
 		harvest()
 		after_harvest = num_items(Items.Gold)
-		log.info(["Harvested maze and gained", after_harvest - before_harvest, Items.Gold])
+		log.debug(["Harvested maze and gained", after_harvest - before_harvest, Items.Gold])
 		solves_to_target = (target_items - num_items(Items.Gold))/gold_per_solve
+		for item in gain_and_cost_items:
+			timer.checkpoint(item)
 		
 def main():
 	change_hat(Hats.Straw_Hat)
 	poison_pill = {}
-	target_amount = 10000
+	target_amount = num_items(Items.Gold) * 25
 	amaze(target_amount, poison_pill)
 
 if __name__ == "__main__":

@@ -5,7 +5,10 @@ import algorithms
 import poison_pill
 import log
 import debug
+import timer
 
+# Unoptimized reaches ~27000 items per min at a ~39:1 harvest:cost convergence
+# Partial optimized reaches ~39700 items per min at a ~45:1 harvest:cost convergence
 def plant_cactus(target_items, poison_pills):
 	log.info(["Planting cactus until", target_items])
 	
@@ -138,21 +141,21 @@ def plant_cactus(target_items, poison_pills):
 						return False
 					if next_pos in field.locked:
 						log.warn(["Blocked by locked tile at", next_pos, field.value[next_pos], " when moving ", direction])
-						debug.dict(field.value, "Debug current value:", True)
-						debug.set(field.locked, "Debug locked:", True)
+						debug.dict(field.value, "Debug current value:")
+						debug.set(field.locked, "Debug locked:")
 						return False
 									
-					field.action(swap, direction)
-					field.action(move, direction)
+					swap(direction)
+					move(direction)
 					field.swap(pos, next_pos)
 					pos = position.update(pos, direction)
 				return True
 					
 			sorted_moves_desc = algorithms.selection_sort_desc(needed_moves)
 			for _, best_source, target_pos in sorted_moves_desc:
-				if best_source in fiels.locked:
+				if best_source in field.locked:
 					continue # Skip this move. We will need to recalculate the remaining numbers
-				position.go_to(best_source[0], best_source[1])
+				position.go_to_quick(best_source[0], best_source[1])
 				bubble(best_source, target_pos)
 				lock_valid_positions()
 				
@@ -193,10 +196,13 @@ def plant_cactus(target_items, poison_pills):
 				debug.list(moves, "Moves debug:")
 				move_cacti(moves)
 
+	gain_and_cost_items = [Items.Cactus, Items.Pumpkin]
+	for item in gain_and_cost_items:
+		timer.start(item)
 	while num_items(Items.Cactus) < target_items:
 		if poison_pill.triggered(poison_pills):
 			break
-		field.plant_field(Entities.Cactus, Grounds.Soil, True, False, False)
+		field.pre_plant_built_ins(Entities.Cactus, False, True)
 		sort_cacti()
 		while not can_harvest():
 			pass # In the unlikely event the cacti are not yet grown, burn some ticks
@@ -205,12 +211,14 @@ def plant_cactus(target_items, poison_pills):
 		if not success:
 			log.warn("Failed to harves cactus. Aborting")
 			break
-		log.info(["Successfully harvested Cactus for a gain of", num_items(Items.Cactus) - pre_harvest])
+		log.debug(["Successfully harvested Cactus for a gain of", num_items(Items.Cactus) - pre_harvest])
+		for item in gain_and_cost_items:
+			timer.checkpoint(item)
 		
 def main():
 	change_hat(Hats.Straw_Hat)
 	poison_pill = get_cost(Entities.Cactus)
-	target_amount = 1000000
+	target_amount = num_items(Items.Cactus) * 15
 	plant_cactus(target_amount, poison_pill)
 
 if __name__ == "__main__":

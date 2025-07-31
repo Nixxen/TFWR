@@ -5,7 +5,9 @@ import position
 import pathfinding
 import algorithms
 import log
+import timer
 
+# Mostly optimized reaches ~2300 items per min at a ~25:1 harvest:cost convergence
 def be_dinosaur(target_items, poison_pills):
 	log.info(["Gathering dinosaur bones until", target_items])
 	
@@ -20,12 +22,11 @@ def be_dinosaur(target_items, poison_pills):
 		south = position.update(pos, South, False)
 		west = position.update(pos, West, False)
 		east = position.update(pos, East, False)
-		moves = []
 		for move in [north, east, south, west]:
 			if not move or move in blocked:
 				continue
-			moves.append(move)
-		return moves != []
+			return True
+		return False
 	
 	def build_tail_grid(tail):
 		grid = algorithms.copy_dict(field.empty)
@@ -38,6 +39,9 @@ def be_dinosaur(target_items, poison_pills):
 		if len(tail) != tail_length:
 			tail.pop(0)
 	
+	gain_and_cost_items = [Items.Bone, Items.Pumpkin]
+	for item in gain_and_cost_items:
+		timer.start(item)
 	while num_items(Items.Bone) < target_items:
 		if poison_pill.triggered(poison_pills):
 			break
@@ -46,8 +50,8 @@ def be_dinosaur(target_items, poison_pills):
 			field.clear_field()
 		next_apple_pos = get_next_apple_pos()
 		while not next_apple_pos: # Fix bad start location
-			field.action(change_hat, Hats.Straw_Hat)
-			field.action(change_hat, Hats.Dinosaur_Hat)
+			change_hat(Hats.Straw_Hat)
+			change_hat(Hats.Dinosaur_Hat)
 			next_apple_pos = get_next_apple_pos()
 		pos = position.get_xy()
 		tail_length = 1 # Including head
@@ -82,11 +86,13 @@ def be_dinosaur(target_items, poison_pills):
 			else:
 				update_tail()
 		before = num_items(Items.Bone)
-		field.action(change_hat, Hats.Straw_Hat)
+		change_hat(Hats.Straw_Hat)
 		after = num_items(Items.Bone)
-		log.info(["Dinosaured for a while. Gained", after-before])
+		log.debug(["Dinosaured for a while. Gained", after-before])
+		for item in gain_and_cost_items:
+			timer.checkpoint(item)
 	# Reset to straw hat if somehow we are still wearing a dinosaur hat
-	field.action(change_hat, Hats.Straw_Hat)
+	change_hat(Hats.Straw_Hat)
 		
 		
 def main():
@@ -94,7 +100,7 @@ def main():
 	if current_entity != None:
 		harvest()
 	poison_pill = {}
-	target_amount = 123123123
+	target_amount = num_items(Items.Bone) * 25
 	be_dinosaur(target_amount, poison_pill)
 
 if __name__ == "__main__":

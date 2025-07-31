@@ -3,6 +3,7 @@ import position
 import algorithms
 import log
 import debug
+import math
 
 plants={}
 infected={}
@@ -104,10 +105,11 @@ def water(pos):
 		return
 		
 	water_to_use=max((water_target-water_level)/expected_increase, 1)
-	success=action(use_item, Items.Water, min(water_to_use, water_items))
+	success=action(use_item, Items.Water, math.ceil(min(water_to_use, water_items)))
 	if not success:
 		return
 	multiplier[pos] = get_water()*5
+	water_level = get_water()
 
 def action(task, arg1 = None, arg2 = None):
 	result = False
@@ -152,6 +154,44 @@ def plant_field(plant_entity, ground_type, do_measurement = False, do_harvest = 
 				value[pos] = measure()
 			action(move, North)
 		action(move, East)
+		
+def pre_plant_built_ins(plant_entity, do_water = True, do_measure = False):
+	position.go_to_quick(0, 0)
+	for x in range(static.world_size):
+		for y in range(static.world_size):
+			pos = (x, y)
+			if not tilled[pos]:
+				if get_ground_type() != Grounds.Soil:
+					till()
+				tilled[pos] = True
+			harvested = False
+			if do_water:
+				water(pos)
+			current_entity = get_entity_type()
+			if current_entity and (current_entity != plant_entity):
+				harvested = harvest() # Remove invalid entity without waiting for growth
+			if harvested or not current_entity:
+				plant(plant_entity)
+			if do_measure:
+				value[pos] = measure()
+			move(North)
+		move(East)
+
+
+def plant_harvest_quick(plant_entity, do_water = False):
+	position.go_to_quick(0, 0)
+	for x in range(static.world_size):
+		for y in range(static.world_size):
+			pos = (x, y)
+			harvested = False
+			if do_water:
+				water(pos)
+			if can_harvest():
+				harvested = harvest()
+			if harvested:
+				plant(plant_entity)
+			move(North)
+		move(East)
 
 def clear_field():
 	position.go_to(0, 0)

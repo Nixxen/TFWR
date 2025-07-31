@@ -3,7 +3,9 @@ import static
 import field
 import poison_pill
 import log
+import timer
 
+# Reaches ~25800 items per min at a ~4:1 harvest:cost convergence
 def plant_pumpkin(target_items, poison_pills):
 	log.info(["Planting pumpkin until", target_items])
 
@@ -38,11 +40,14 @@ def plant_pumpkin(target_items, poison_pills):
 			current_entity=get_entity_type()
 			if not current_entity:
 				plant(Entities.Pumpkin)
-				revisited.add(pos)
+				revisited.add(pos) # TODO: Force grow using fertilizer
 			elif not can_harvest():
 				revisited.add(pos)
 		return revisited	
 	
+	gain_and_cost_items = [Items.Pumpkin, Items.Carrot]
+	for item in gain_and_cost_items:
+		timer.start(item)
 	field.plant_field(Entities.Pumpkin, Grounds.Soil)
 	# TODO: Figure Out what the measure does for pumpkins
 	# Assume all planting failed on first run
@@ -56,11 +61,13 @@ def plant_pumpkin(target_items, poison_pills):
 			# TODO: Fix weird revisit pattern
 		harvest()
 		failed = replant_field()
+		for item in gain_and_cost_items:
+			timer.checkpoint(item)
 		
 def main():
 	change_hat(Hats.Straw_Hat)
 	poison_pill = get_cost(Entities.Pumpkin)
-	target_amount = 1000000
+	target_amount = num_items(Items.Pumpkin) * 2
 	plant_pumpkin(target_amount, poison_pill)
 
 if __name__ == "__main__":

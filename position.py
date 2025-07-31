@@ -75,6 +75,7 @@ def get_direction(source, target):
 
 # Go to target coordinates using world wrap
 # Assumes a clear path
+# Updates field states
 def go_to(x_target, y_target):
 	pos = get_xy()
 	while pos != (x_target, y_target):
@@ -94,7 +95,31 @@ def go_to(x_target, y_target):
 			else:
 				field.action(move,South)
 				pos = (pos[0], (pos[1] - 1 + static.world_size) % static.world_size)
+
+# Go to target coordinates using world wrap
+# Assumes a clear path
+# NB! Does not update field values!
+def go_to_quick(x_target, y_target):
+	pos = get_xy()
+	while pos != (x_target, y_target):
+		if pos[0] != x_target:
+			delta_x = (x_target - pos[0]) % static.world_size
+			if delta_x <= static.world_size // 2:
+				move(East)
+				pos = update(pos, East)
+			else:
+				move(West)
+				pos = update(pos, West)
+		if pos[1] != y_target:
+			delta_y = (y_target - pos[1]) % static.world_size
+			if delta_y <= static.world_size // 2:
+				move(North)
+				pos = update(pos, North)
+			else:
+				move(South)
+				pos = update(pos, South)
 				
+
 # Go to target coordinates without world wrap
 # Assumes path can be bloced
 # NB! Does not update field values!
