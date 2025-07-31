@@ -1,3 +1,5 @@
+import position
+
 # Sort based on first value in the entity tuple, ascending
 def selection_sort(entities):
 	for i in range(len(entities)):
@@ -95,7 +97,19 @@ def get_key_with_highest_value(dict):
 		max_value = dict[key]
 		max_key = key
 	return max_key
-			
+
+# Add a bidirectional position to a set
+def set_bidirection(output, pos, direction):
+	output.add((pos, direction))
+	output.add((position.update(pos, direction), position.get_opposite(direction)))
+
+# Delete a bidirectional position to a set
+def del_bidirection(output, pos, direction):
+	if (pos, direction) in output:
+		output.remove((pos, direction))
+	if (position.update(pos, direction), position.get_opposite(direction)) in output:
+		output.remove((position.update(pos, direction), position.get_opposite(direction)))
+		
 
 def main_highest_value():
 	import log

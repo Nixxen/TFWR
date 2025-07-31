@@ -1,6 +1,16 @@
 import field
 import static
 
+_OPPOSITE = {
+	North: South,
+	East: West,
+	South: North,
+	West: East
+}
+
+def get_opposite(direction):
+	return _OPPOSITE[direction]
+
 def get_xy():
 	return (get_pos_x(),get_pos_y())
 
@@ -59,7 +69,7 @@ def get_direction(source, target):
 			return East
 		else:
 			return West
-	if source[1] < target[0]:
+	if source[1] < target[1]:
 		return North
 	return South
 
@@ -87,26 +97,27 @@ def go_to(x_target, y_target):
 				
 # Go to target coordinates without world wrap
 # Assumes path can be bloced
+# NB! Does not update field values!
 def go_to_limited(x_target, y_target):
 	pos = get_xy()
 	while pos != (x_target, y_target):
 		moved = True
 		if pos[0] != x_target:
 			if pos[0] < x_target:
-				moved = field.action(move,East)
+				moved = move(East)
 				if moved:
 					pos = (pos[0] + 1, pos[1])
 			else:
-				moved = field.action(move,West)
+				moved = move(West)
 				if moved:
 					pos = (pos[0] - 1, pos[1])
 		if pos[1] != y_target:
 			if pos[1] < y_target:
-				moved = field.action(move,North)
+				moved = move(North)
 				if moved:
 					pos = (pos[0], pos[1] + 1)
 			else:
-				moved = field.action(move,South)
+				moved = move(South)
 				if moved:
 					pos = (pos[0], pos[1] - 1)
 		if not moved:

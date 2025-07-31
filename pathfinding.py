@@ -12,10 +12,8 @@ import debug
 # heur is the cost function. E.g., position.distance.
 # blocking_position is a dictionary of positions with blocking values.
 #  any truthy value will be blocking.
-# If `moving_block` is true, each move will make the block
-# follow the drone (e.g., for Snake)
-# If `moving_block` is false, the blocks are considered static (e.g., for mazes)
-def astar(start, target, heur, blocked_positions, moving_block = False):
+# The block map will move after the snake
+def astar_snake(start, target, heur, blocked_positions):
 	# Returns a stack for the path
 	def reconstruct_path(moves, current):
 		path = [current]
@@ -70,9 +68,8 @@ def astar(start, target, heur, blocked_positions, moving_block = False):
 	known_cost[start] = 0
 	estimated_cost = cost_dict()
 	estimated_cost[start] = heur(start, target)
-	if moving_block:
-		block_map = {}
-		block_map[start] = blocked_positions
+	block_map = {}
+	block_map[start] = blocked_positions
 	
 	while open_heap:
 		closest = open_heap[0]
@@ -81,18 +78,78 @@ def astar(start, target, heur, blocked_positions, moving_block = False):
 			return reconstruct_path(moves, current)
 		
 		min_heap.delete(open_heap, closest)
-		if moving_block:
-			neighbors = get_neighbors(current, block_map[current])
-		else:
-			neighbors = get_neighbors(current, blocked_positions)
+		neighbors = get_neighbors(current, block_map[current])
 		for neighbor in neighbors:
 			tentative_cost = known_cost[current] + 1
 			if neighbor not in known_cost or tentative_cost < known_cost[neighbor]:
 				moves[neighbor] = current
 				known_cost[neighbor] = tentative_cost
 				estimated_cost[neighbor] = tentative_cost + heur(neighbor, target)
-				if moving_block:
-					block_map[neighbor] = update_moving_block(neighbor, block_map[current])
+				block_map[neighbor] = update_moving_block(neighbor, block_map[current])
+				if neighbor not in open_heap:
+					min_heap.insert(open_heap, (estimated_cost[neighbor], neighbor))
+	return []
+
+# Get neighbors directions of unvisited neighbors where we do not yet know if there is a wall
+# Used in maze algorithms
+def get_neighbors_directions_maze(pos, walls, visited = None):
+	neighbors = []
+	for direction in [North, East, South, West]:
+		if (pos, direction) in walls:
+			continue
+		neighbor = position.update(pos, direction, False)
+		if neighbor == None:
+			continue
+		if visited != None and neighbor in visited:
+			continue
+		neighbors.append(direction)
+	return neighbors
+	
+# Pathfind from pos to target avoiding any blocking_position using A*
+# Returns the full path of moves required to reach target without
+# hitting any blocking areas.
+# heur is the cost function. E.g., position.distance.
+# blocking_position is a set of tuples (position, direction) indicating a block
+# from position in direction.
+def astar_maze(start, target, heur, walls):
+	# Returns a stack for the path
+	def reconstruct_path(moves, current):
+		path = [current]
+		while current in moves:
+			current = moves[current]
+			path.append(current)
+		return path
+	
+	# Returns a grid dict initialized with arbitrarily high values
+	def cost_dict():
+		cost = {}
+		for x in range(static.world_size):
+			for y in range(static.world_size):
+				pos = (x, y)
+				cost[pos] = 99999 # Essentially "infinite"
+		return cost
+	
+	open_heap = [(0, start)] 
+	moves = {}
+	known_cost = cost_dict()
+	known_cost[start] = 0
+	estimated_cost = cost_dict()
+	estimated_cost[start] = heur(start, target)
+	
+	while open_heap:
+		closest = open_heap[0]
+		current = closest[1]
+		if current == target:
+			return reconstruct_path(moves, current)
+		
+		min_heap.delete(open_heap, closest) # TODO: Fix this algorithm
+		for direction in get_neighbors_directions_maze(current, walls):
+			tentative_cost = known_cost[current] + 1
+			neighbor = position.update(current, direction, False)
+			if neighbor not in known_cost or tentative_cost < known_cost[neighbor]:
+				moves[neighbor] = current
+				known_cost[neighbor] = tentative_cost
+				estimated_cost[neighbor] = tentative_cost + heur(neighbor, target)
 				if neighbor not in open_heap:
 					min_heap.insert(open_heap, (estimated_cost[neighbor], neighbor))
 	return []
@@ -149,6 +206,134 @@ def greedy_wrapped_traversal(start, targets, max_radius = 5):
 	algorithms.reverse_list_in_place(path)
 	return path
 
+# Pseudo-DFS with wall constraints and inline movement
+# Walls is a (posA,posB) set representing walls between posA and posB.
+# It is expected that if posA and posB has a wall, then there is a wall
+# from posB to posA as well.
+# Returns a tuple (success, walls) indicating whether the end_trigger wass successfully triggered
+# and the corresponding walls built from the mapping
+def dfs(start_pos, end_trigger):
+	def dfs_recurse(pos):
+		visited.add(pos)
+		if end_trigger():
+			return True
+		for direction in get_neighbors_directions_maze(pos, walls, visited):
+			success = move(direction)
+			new_pos = position.update(pos, direction)
+			if not success: # Path blocked 
+				walls.add((pos, direction))
+				walls.add((new_pos, position.get_opposite(direction)))
+				continue
+			if dfs_recurse(new_pos):
+				return True
+			move(position.get_opposite(direction)) # Backtrack in failed recurse
+		return False # No valid neighbors have a path to the end_trigget
+	
+	walls = set()
+	visited = set()
+	success = dfs_recurse(start_pos)
+	return success, walls
+
+# Displays a representation of the maze in the output, showing the
+# currently known walls, along with the drone and treasure positions
+# Allows for two poi (points of interest) in the form of (drone_pos, treasure_pos)
+def debug_walls(walls, poi, override = False, size = static.world_size):
+	if not log.enabled_debug and not override:
+		return
+	drone, treasure = poi
+	drone = poi[0]
+	treasure = poi[1]
+	# ─,│,┌,┐,└,┘,├,┤,┬,┴,┼,═,║,╔,╗,╚,╝,╠,╣,╦,╩,╬,╞,╡,╥,╨,╓,╖,╙,╜,╟,╢,╫,╪,╧
+	drone_symbol = "○"
+	treasure_symbol = "□"
+	log.debug(["Legend:", drone_symbol, "= drone,", treasure_symbol, "= treasure"], override)
+	log.debug(["Walls debug:", override])
+	last = size - 1
+	y = last
+	for y in range(last, -1, -1):
+		north_wall = " "
+		line = str(y)
+		south_wall = " "
+		x_coords = " "
+		for x in range(size):
+			pos = (x, y)
+			symbol = "."
+			if pos == drone:
+				symbol = drone_symbol
+			if pos == treasure:
+				symbol = treasure_symbol
+			# Build north maze border and first line
+			if y == last:
+				if x == 0:
+					north_wall += "╔═"
+				else:
+					if (pos, West) in walls:
+						north_wall += "╤═"
+					else:
+						north_wall += "══"
+				if x == last:
+					north_wall += "╗"
+				if (pos, West) in walls:
+					line += "│" + symbol
+				else:
+					if x == 0:
+						line += "║" + symbol
+					else:
+						line += " " + symbol
+				if x == last:
+					line += "║"
+			
+			# Build lines and intermediate walls
+			else:
+				if x == 0: # Build west maze border for the intermediate walls
+					if (pos, North) in walls:
+						north_wall += "╟─"
+					else:
+						north_wall += "║ "
+				elif (pos, North) in walls:
+					north = position.update(pos, North, False)
+					if (pos, West) in walls:
+						north_wall += "┼─"
+					elif (north, West) in walls:
+						north_wall += "┼─"
+					else:
+						north_wall += "──"
+				else:
+					west = position.update(pos, West, False)
+					if (west, North) in walls:
+						north_wall += "┼ "
+					else:
+						north_wall += "  "
+				# Build line
+				if (pos, West) in walls:
+					line += "│" + symbol
+				else:
+					if x == 0:
+						line += "║" + symbol
+					else:
+						line += " " + symbol
+				if x == last: # Close East wall
+					north_wall += "║"
+					line += "║"
+			# Build south maze border
+			if y == 0:
+				if x == 0:
+					south_wall += "╚═"
+				else:
+					if (pos, West) in walls:
+						south_wall += "╧═"
+					else:
+						south_wall += "══"
+				if x == last:
+					south_wall += "╝"
+				x_coords += " " + str(x)
+		log.debug([north_wall], override)
+		log.debug([line], override)
+		if south_wall != " ":
+			log.debug([south_wall], override)
+			log.debug([x_coords], override)
+		y -= 1
+		
 def debug_moves(grid, moves, override = False):
 	log.debug(["Moves debug:", override])
 	y = static.world_size - 1
@@ -158,20 +343,29 @@ def debug_moves(grid, moves, override = False):
 			pos = (x, y)
 			if pos in moves:
 				if pos == moves[0]:
-					line += " E"
+					line += " mE"
 				elif pos == moves[len(moves)-1]:
-					line += " S"
+					line += " mS"
 				else:
-					line += " X"
+					pos_index = None
+					for index in range(len(moves)):
+						if pos == moves[index]:
+							pos_index = index
+							break
+					if pos_index == None:
+						line += " mX"
+					else:
+						line += " m" + str(pos_index)
+					
 			else:
 				val = grid[pos]
 				if not val:
-					line += " ."
+					line += "  ."
 				else:
 					if len(str(val)) == 2:
 						line += str(val)
 					else:
-						line += " " + str(val)
+						line += " b" + str(val)
 		log.debug([line], override)
 		y -= 1
 
@@ -188,7 +382,7 @@ def main_astar():
 	blocking[(0,2)] = 2
 	blocking[(1,2)] = 1
 	
-	moves = astar(start, target, position.distance, blocking, False)
+	moves = astar_snake(start, target, position.distance, blocking)
 	log.info(["Path:", moves])
 	debug_moves(blocking, moves, True)
 	
@@ -212,7 +406,25 @@ def main_greedy():
 		order[pos] = visit_number
 		visit_number += 1
 	debug.dict(order, "Greedy path debug:", True)
-	
+
+def main_debug_walls():
+	walls = set()
+	algorithms.set_bidirection(walls, (0,0), East)
+	algorithms.set_bidirection(walls, (0,1), North)
+	algorithms.set_bidirection(walls, (1,1), South)
+	algorithms.set_bidirection(walls, (1,1), East)
+	algorithms.set_bidirection(walls, (2,0), East)
+	algorithms.set_bidirection(walls, (3,1), East)
+	algorithms.set_bidirection(walls, (3,1), North)
+	algorithms.set_bidirection(walls, (4,2), South)
+	algorithms.set_bidirection(walls, (4,2), West)
+	algorithms.set_bidirection(walls, (2,4), East)
+	algorithms.set_bidirection(walls, (2,3), North)
+	drone = (1,1)
+	treasure = (3,3)
+	debug_walls(walls, (drone, treasure), True, 5)
+
 if __name__ == '__main__':
 	#main_astar()
-	main_greedy()
+	#main_greedy()
+	main_debug_walls()

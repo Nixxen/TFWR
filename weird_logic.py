@@ -11,7 +11,7 @@ def plant_grass_fertilize(target_items, poison_pills):
 	
 	# Plants a cross pattern of grass, repeatedly iterating through the 5 positions
 	# attempting to optimize the gain of weird substance.
-	# Reaches ~6700 items per min at a ~11:1 harvest:cost convergence
+	# Reaches ~13000 items per min at a ~11:1 harvest:cost convergence
 	def plant_cross_pattern():
 		def pre_plant_cross(start_pos):
 			pos = start_pos
@@ -45,16 +45,23 @@ def plant_grass_fertilize(target_items, poison_pills):
 		moves = [North, East, West, North, South, West, East, South]
 		harvest_cross()
 		pos = pre_plant_cross(planting_center)
+		counter = 0
 		
 		while num_items(Items.Weird_Substance) < target_items:
 			if poison_pill.triggered(poison_pills):
 				break
-			field.water(pos) # Water only center
+			for _ in range(74): # Rough timer for water < 0.75
+				for index in range(len(moves)):
+					move(moves[index])
+					harvest()
+					plant(plant_entity)
+					use_item(Items.Fertilizer)
 			for index in range(len(moves)):
-				field.action(move, moves[index])
-				field.action(harvest)
-				field.plant(plant_entity)
-				field.action(use_item, Items.Fertilizer)
+				move(moves[index])
+				field.water(moves[index])
+				harvest()
+				plant(plant_entity)
+				use_item(Items.Fertilizer)
 			for item in gain_and_cost_items:
 				if not timer.checkpoint(item, 10):
 					break # Skip checking the rest as we are under the threshold

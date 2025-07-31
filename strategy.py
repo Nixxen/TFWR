@@ -6,6 +6,7 @@ import sunflower_logic
 import carrot_logic
 import grass_logic
 import weird_logic
+import maze_logic
 import kickstart
 import algorithms
 import log
@@ -20,6 +21,7 @@ low_limit = {
 	Items.Wood: 4000,
 	Items.Bone: 4000,
 	Items.Weird_Substance: 4000,
+	Items.Gold: 4000,
 	Hats.Straw_Hat: 0 # kickstart wildcard
 }
 entity_map = {
@@ -30,6 +32,7 @@ entity_map = {
 	Items.Hay: Entities.Grass,
 	Items.Wood: Entities.Tree,
 	Items.Bone: Entities.Apple,
+	Items.Gold: Entities.Bush, # Requires Weird substance on bush, No real cost
 	Items.Weird_Substance: Entities.Bush # It is time based and we are planting bushes. Without time, these can't be gained
 }
 function = {
@@ -41,6 +44,7 @@ function = {
 	Items.Wood: tree_logic.plant_tree,
 	Items.Bone: snake_logic.be_dinosaur,
 	Items.Weird_Substance: weird_logic.plant_grass_fertilize,
+	Items.Gold: maze_logic.amaze,
 	Hats.Straw_Hat: kickstart.execute_kickstart
 }
 poison_pills = {}

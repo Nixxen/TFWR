@@ -125,25 +125,33 @@ def plant_cactus(target_items, poison_pills):
 						return None  # Already at destination
 			            
 				pos = source
+				if source in field.locked:
+					log.warn(["Source position", pos, "with value", field.value[source], "is locked. Intended to move to", target])
+					debug.dict(field.value, "Debug current value:")
+					debug.set(field.locked, "Debug locked:")
+					return False
 				while pos != target:
 					direction = get_direction(pos, target) # not using position.get_direction to allow for longer paths
 					next_pos = position.update(pos, direction)
 					if not next_pos:
 						log.warn(["Invalid bubble direction from", pos, "to", target])
-						return
+						return False
 					if next_pos in field.locked:
 						log.warn(["Blocked by locked tile at", next_pos, field.value[next_pos], " when moving ", direction])
 						debug.dict(field.value, "Debug current value:", True)
 						debug.set(field.locked, "Debug locked:", True)
-						return
+						return False
 									
 					field.action(swap, direction)
 					field.action(move, direction)
 					field.swap(pos, next_pos)
 					pos = position.update(pos, direction)
+				return True
 					
 			sorted_moves_desc = algorithms.selection_sort_desc(needed_moves)
 			for _, best_source, target_pos in sorted_moves_desc:
+				if best_source in fiels.locked:
+					continue # Skip this move. We will need to recalculate the remaining numbers
 				position.go_to(best_source[0], best_source[1])
 				bubble(best_source, target_pos)
 				lock_valid_positions()
